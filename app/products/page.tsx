@@ -1,13 +1,8 @@
-// app/products/page.tsx
 import { ProductFilters } from "@/components/product-filters"
 import { ProductGrid } from "@/components/product-grid"
 import { Separator } from "@/components/ui/separator"
-import { query } from "@/lib/db"
 
-export default async function ProductsPage() {
-  // ดึงข้อมูลสินค้า
-  const products = await query("SELECT * FROM products")
-
+export default function ProductsPage() {
   return (
     <div className="w-full max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="flex flex-col space-y-2">
@@ -21,9 +16,10 @@ export default async function ProductsPage() {
           <ProductFilters />
         </div>
         <div className="flex-1">
-          <ProductGrid products={products} />
+          <ProductGrid />
         </div>
       </div>
     </div>
   )
 }
+

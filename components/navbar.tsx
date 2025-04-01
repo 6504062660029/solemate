@@ -68,7 +68,7 @@ export default function Navbar() {
             </Link>
           </Button>
           <Button variant="ghost" size="icon" asChild>
-            <Link href="/login">
+            <Link href="/dashboard">
               <User className="h-5 w-5" />
               <span className="sr-only">Account</span>
             </Link>

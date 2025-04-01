@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic"
+
 import { NextResponse } from "next/server"
 import { searchProducts } from "@/app/actions/product-actions"
 
@@ -17,4 +19,3 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Failed to search products" }, { status: 500 })
   }
 }
-

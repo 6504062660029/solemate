@@ -1,39 +1,35 @@
-// pages/api/register.ts
-import type { NextApiRequest, NextApiResponse } from "next"
-import bcrypt from "bcryptjs"
+import { NextRequest, NextResponse } from "next/server"
 import { query } from "@/lib/db"
+import { createHash } from "crypto"
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== "POST") {
-    return res.status(405).json({ message: "Method Not Allowed" })
-  }
+function hashPassword(password: string) {
+  return createHash("sha256").update(password).digest("hex")
+}
 
-  const { firstName, lastName, email, password, phone } = req.body
-
-  if (!firstName || !lastName || !email || !password) {
-    return res.status(400).json({ message: "Missing fields" })
-  }
-
+export async function POST(req: NextRequest) {
   try {
-    // Check if email already exists
-    const existing = await query("SELECT id FROM user WHERE email = ?", [email])
-    if ((existing as any[]).length > 0) {
-      return res.status(409).json({ message: "Email already exists" })
+    const body = await req.json()
+    const { firstName, lastName, email, password } = body
+
+    if (!firstName || !lastName || !email || !password) {
+      return NextResponse.json({ message: "Missing fields" }, { status: 400 })
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10)
+    const existing = await query("SELECT id FROM user WHERE email = ?", [email])
+    if ((existing as any[]).length > 0) {
+      return NextResponse.json({ message: "Email already exists" }, { status: 409 })
+    }
 
-    // Insert new user
+    const passwordHash = hashPassword(password)
+
     await query(
-      `INSERT INTO user 
-      (email, password_hash, first_name, last_name, phone, is_admin, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, 0, NOW(), NOW())`,
-      [email, hashedPassword, firstName, lastName, phone || ""]
+      "INSERT INTO user (email, password_hash, first_name, last_name) VALUES (?, ?, ?, ?)",
+      [email, passwordHash, firstName, lastName]
     )
 
-    return res.status(200).json({ message: "User registered successfully" })
+    return NextResponse.json({ message: "User registered successfully" })
   } catch (error: any) {
-    console.error(error)
-    return res.status(500).json({ message: "Server error" })
+    console.error("Register error:", error)
+    return NextResponse.json({ message: "Server error" }, { status: 500 })
   }
 }

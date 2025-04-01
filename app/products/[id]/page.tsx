@@ -13,6 +13,46 @@ import { useCart } from "@/context/cart-context"
 import { useWishlist } from "@/context/wishlist-context"
 import { useToast } from "@/hooks/use-toast"
 
+// This would normally come from a database or API
+// const product = {
+//   id: 1,
+//   name: "Air Max Pulse",
+//   brand: "Nike",
+//   category: "Athletic",
+//   price: 149.99,
+//   originalPrice: 169.99,
+//   rating: 4.8,
+//   reviewCount: 124,
+//   colors: ["Black/White", "Blue/Grey", "Red/Black"],
+//   sizes: ["7", "8", "9", "10", "11", "12"],
+//   images: [
+//     "/placeholder.svg?height=600&width=600",
+//     "/placeholder.svg?height=600&width=600",
+//     "/placeholder.svg?height=600&width=600",
+//     "/placeholder.svg?height=600&width=600",
+//   ],
+//   description:
+//     "The Nike Air Max Pulse draws inspiration from the London music scene, bringing an underground touch to the iconic Air Max line. Its technical design delivers a tough, utility-focused silhouette that's built to withstand everyday wear and tear. The textile-wrapped midsole and Air Max unit in the heel provide responsive cushioning for all-day comfort.",
+//   features: [
+//     "Mesh and synthetic upper for breathability and durability",
+//     "Air Max cushioning for responsive comfort",
+//     "Rubber outsole for traction and durability",
+//     "Pull tab on heel for easy on and off",
+//     "Padded collar for comfort",
+//   ],
+//   specifications: {
+//     material: "Mesh, Synthetic",
+//     cushioning: "Air Max",
+//     closure: "Lace-up",
+//     terrain: "Road, Gym",
+//     weight: "11.5 oz / 326 g",
+//     style: "Athletic",
+//   },
+//   isNew: true,
+//   isBestSeller: true,
+// }
+
+// Update the component to fetch the product based on the ID parameter
 export default function ProductDetailPage({ params }: { params: { id: string } }) {
   const { addItem } = useCart()
   const { addItem: addToWishlist, removeItem: removeFromWishlist, isInWishlist } = useWishlist()
@@ -21,57 +61,34 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
   const [selectedSize, setSelectedSize] = useState<string>("")
   const [quantity, setQuantity] = useState<number>(1)
   const [product, setProduct] = useState<any>(null)
-  const [loading, setLoading] = useState<boolean>(true)
+  const [loading, setLoading] = useState(true)
 
+  // Fetch product data when component mounts
   useEffect(() => {
-    // Fetch product data based on ID
-    const fetchProduct = async () => {
+    async function fetchProduct() {
       try {
-        // This would normally be an API call
-        // For now, we'll use the sample data
-        const productData = {
-          id: Number.parseInt(params.id),
-          name: "Air Max Pulse",
-          brand: "Nike",
-          category: "Athletic",
-          price: 149.99,
-          originalPrice: 169.99,
-          rating: 4.8,
-          reviewCount: 124,
-          colors: ["Black/White", "Blue/Grey", "Red/Black"],
-          sizes: ["7", "8", "9", "10", "11", "12"],
-          image_url: "/placeholder.svg?height=600&width=600",
-          description:
-            "The Nike Air Max Pulse draws inspiration from the London music scene, bringing an underground touch to the iconic Air Max line. Its technical design delivers a tough, utility-focused silhouette that's built to withstand everyday wear and tear. The textile-wrapped midsole and Air Max unit in the heel provide responsive cushioning for all-day comfort.",
-          features: [
-            "Mesh and synthetic upper for breathability and durability",
-            "Air Max cushioning for responsive comfort",
-            "Rubber outsole for traction and durability",
-            "Pull tab on heel for easy on and off",
-            "Padded collar for comfort",
-          ],
-          specifications: {
-            material: "Mesh, Synthetic",
-            cushioning: "Air Max",
-            closure: "Lace-up",
-            terrain: "Road, Gym",
-            weight: "11.5 oz / 326 g",
-            style: "Athletic",
-          },
-          isNew: true,
-          isBestSeller: true,
-        }
-
-        setProduct(productData)
-        if (productData.colors && productData.colors.length > 0) {
-          setSelectedColor(productData.colors[0])
-        }
+        const response = await fetch(`/api/products/${params.id}`)
+        const data = await response.json()
+        setProduct(data.product)
       } catch (error) {
         console.error("Error fetching product:", error)
-        toast({
-          title: "Error",
-          description: "Failed to load product details",
-          variant: "destructive",
+        // Set a default product if fetch fails
+        setProduct({
+          id: Number.parseInt(params.id),
+          name: "Product not found",
+          brand: "Unknown",
+          price: 0,
+          originalPrice: 0,
+          rating: 0,
+          reviewCount: 0,
+          images: ["/placeholder.svg?height=600&width=600"],
+          colors: [],
+          sizes: [],
+          description: "Product details could not be loaded.",
+          features: [],
+          specifications: {},
+          isNew: false,
+          isBestSeller: false,
         })
       } finally {
         setLoading(false)
@@ -79,7 +96,14 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
     }
 
     fetchProduct()
-  }, [params.id, toast])
+  }, [params.id])
+
+  // Set default color and size when product data is loaded
+  useEffect(() => {
+    if (product && product.colors && product.colors.length > 0) {
+      setSelectedColor(product.colors[0])
+    }
+  }, [product])
 
   const inWishlist = product ? isInWishlist(product.id) : false
 
@@ -93,12 +117,14 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
       return
     }
 
+    if (!product) return
+
     addItem({
       id: product.id,
       name: product.name,
       brand: product.brand,
       price: product.price,
-      image: product.image_url,
+      image: product.images?.[0] || "/placeholder.svg?height=600&width=600",
       color: selectedColor,
       size: selectedSize,
       quantity: quantity,
@@ -111,6 +137,8 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
   }
 
   const handleWishlistToggle = () => {
+    if (!product) return
+
     if (inWishlist) {
       removeFromWishlist(product.id)
       toast({
@@ -123,8 +151,8 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
         name: product.name,
         brand: product.brand,
         price: product.price,
-        originalPrice: product.originalPrice,
-        image: product.image_url,
+        originalPrice: product.originalPrice || product.price,
+        image: product.images?.[0] || "/placeholder.svg?height=600&width=600",
         rating: product.rating,
         reviewCount: product.reviewCount,
       })
@@ -137,12 +165,8 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
 
   if (loading) {
     return (
-      <div className="w-full max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex items-center justify-center h-96">
-          <div className="text-center">
-            <p className="text-lg">Loading product details...</p>
-          </div>
-        </div>
+      <div className="w-full max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex justify-center items-center min-h-[60vh]">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
       </div>
     )
   }
@@ -150,15 +174,11 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
   if (!product) {
     return (
       <div className="w-full max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex items-center justify-center h-96">
-          <div className="text-center">
-            <h2 className="text-2xl font-bold">Product Not Found</h2>
-            <p className="mt-2">The product you're looking for doesn't exist or has been removed.</p>
-            <Button asChild className="mt-4">
-              <Link href="/products">Browse Products</Link>
-            </Button>
-          </div>
-        </div>
+        <h1 className="text-2xl font-bold">Product not found</h1>
+        <p className="mt-4">The product you are looking for does not exist or has been removed.</p>
+        <Button className="mt-6" asChild>
+          <Link href="/products">Back to Products</Link>
+        </Button>
       </div>
     )
   }
@@ -177,7 +197,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
         <div className="space-y-4">
           <div className="overflow-hidden rounded-lg border">
             <Image
-              src={product.image_url || "/pid1.png?height=300&width=300"}
+              src={product.images?.[0] || "/placeholder.svg?height=600&width=600"}
               alt={product.name}
               width={600}
               height={600}
@@ -185,11 +205,10 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
             />
           </div>
           <div className="grid grid-cols-4 gap-4">
-            {/* Placeholder for additional product images */}
-            {[1, 2, 3, 4].map((index) => (
+            {(product.images || ["/placeholder.svg?height=600&width=600"]).map((image: string, index: number) => (
               <div key={index} className="overflow-hidden rounded-md border">
                 <Image
-                  src={product.image_url || "/placeholder.svg?height=150&width=150"}
+                  src={image || "/placeholder.svg?height=150&width=150"}
                   alt={`${product.name} - Image ${index + 1}`}
                   width={150}
                   height={150}
@@ -204,7 +223,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
         <div className="space-y-6">
           <div>
             <div className="flex items-center gap-2">
-              <Link href={`/brands/${product.brand.toLowerCase()}`}>
+              <Link href={`/brands/${product.brand?.toLowerCase()}`}>
                 <Badge variant="outline">{product.brand}</Badge>
               </Link>
               {product.isNew && <Badge className="bg-blue-600 hover:bg-blue-700">New</Badge>}
@@ -230,9 +249,9 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
 
           <div>
             <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-bold">${product.price.toFixed(2)}</span>
+              <span className="text-3xl font-bold">${product.price?.toFixed(2)}</span>
               {product.originalPrice > product.price && (
-                <span className="text-lg text-muted-foreground line-through">${product.originalPrice.toFixed(2)}</span>
+                <span className="text-lg text-muted-foreground line-through">${product.originalPrice?.toFixed(2)}</span>
               )}
               {product.originalPrice > product.price && (
                 <Badge className="ml-2 bg-red-600 hover:bg-red-700">
@@ -255,7 +274,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
                   <SelectValue placeholder="Select color" />
                 </SelectTrigger>
                 <SelectContent>
-                  {product.colors.map((color) => (
+                  {(product.colors || []).map((color: string) => (
                     <SelectItem key={color} value={color}>
                       {color}
                     </SelectItem>
@@ -273,7 +292,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
                   <SelectValue placeholder="Select size" />
                 </SelectTrigger>
                 <SelectContent>
-                  {product.sizes.map((size) => (
+                  {(product.sizes || []).map((size: string) => (
                     <SelectItem key={size} value={size}>
                       {size}
                     </SelectItem>
@@ -345,17 +364,17 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
           </TabsContent>
           <TabsContent value="features" className="mt-4">
             <ul className="list-inside list-disc space-y-2">
-              {product.features.map((feature, index) => (
+              {(product.features || []).map((feature: string, index: number) => (
                 <li key={index}>{feature}</li>
               ))}
             </ul>
           </TabsContent>
           <TabsContent value="specifications" className="mt-4">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              {Object.entries(product.specifications).map(([key, value]) => (
+              {Object.entries(product.specifications || {}).map(([key, value]) => (
                 <div key={key} className="flex justify-between border-b pb-2">
                   <span className="font-medium capitalize">{key}</span>
-                  <span>{value}</span>
+                  <span>{value as string}</span>
                 </div>
               ))}
             </div>

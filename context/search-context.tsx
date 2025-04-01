@@ -27,7 +27,7 @@ export function SearchProvider({ children }: { children: React.ReactNode }) {
   const performSearch = () => {
     if (searchQuery.trim()) {
       setIsSearching(true)
-      router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`)
+      router.push(`/search?q=฿{encodeURIComponent(searchQuery.trim())}`)
     }
   }
 

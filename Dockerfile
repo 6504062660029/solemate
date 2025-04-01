@@ -1,21 +1,24 @@
-# Dockerfile
-# 1. Use official Node image
-FROM node:20-alpine
-
-# 2. Set working directory
+# Build stage
+FROM node:18-alpine AS builder
 WORKDIR /app
 
-# 3. Copy project files
+COPY package*.json ./
+RUN npm install --legacy-peer-deps
+
 COPY . .
+RUN npm run build
 
-# 4. Install dependencies using pnpm
-RUN corepack enable && pnpm install
+# Run stage
+FROM node:18-alpine AS runner
+WORKDIR /app
 
-# 5. Build the app
-RUN pnpm build
+COPY --from=builder /app/package*.json ./
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/.next ./.next
 
-# 6. Expose port
+COPY --from=builder /app/app ./app
+
+
 EXPOSE 3000
-
-# 7. Start the app
-CMD ["pnpm", "start"]
+CMD ["npm", "run", "start"]

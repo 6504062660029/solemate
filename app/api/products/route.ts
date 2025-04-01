@@ -1,20 +1,12 @@
 import { NextResponse } from "next/server"
-import { query } from "@/lib/db"
+import { getProducts } from "@/app/actions/product-actions"
 
 export async function GET() {
   try {
-    const products = await query("SELECT * FROM products")
-
-    const parsed = products.map((p: any) => ({
-      ...p,
-      price: Number(p.price),
-      original_price: p.original_price ? Number(p.original_price) : null,
-      image_url: p.image_url || `/image/pid${p.id}.png`, // ✅ ใช้จาก DB หรือ fallback
-    }))
-
-    return NextResponse.json({ products: parsed })
+    const products = await getProducts()
+    return NextResponse.json({ products })
   } catch (error) {
-    console.error("Error fetching products:", error)
-    return NextResponse.json({ error: "Failed to load products" }, { status: 500 })
+    console.error("Error in products API route:", error)
+    return NextResponse.json({ error: "Failed to fetch products" }, { status: 500 })
   }
 }

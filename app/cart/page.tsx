@@ -6,9 +6,27 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
 import { useCart } from "@/context/cart-context"
+import { useEffect, useState } from "react"
+
 
 export default function CartPage() {
   const { items, removeItem, updateQuantity, subtotal, itemCount } = useCart()
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
+
+  useEffect(() => {
+    const checkSession = async () => {
+      try {
+        const res = await fetch("/api/session")
+        const data = await res.json()
+        setIsLoggedIn(data.loggedIn)
+      } catch (error) {
+        setIsLoggedIn(false)
+      }
+    }
+
+    checkSession()
+  }, [])
+
 
   const handleQuantityChange = (id: number, newQuantity: number) => {
     if (newQuantity < 1) return
@@ -29,6 +47,8 @@ export default function CartPage() {
     )
   }
 
+  
+
   return (
     <div className="w-full max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <h1 className="text-3xl font-bold mb-6">Your Cart</h1>
@@ -45,7 +65,7 @@ export default function CartPage() {
             <Separator />
 
             {items.map((item) => (
-              <div key={`${item.id}-${item.color}-${item.size}`}>
+              <div key={`฿{item.id}-฿{item.color}-฿{item.size}`}>
                 <div className="p-4 grid grid-cols-12 gap-4 items-center">
                   <div className="col-span-6">
                     <div className="flex gap-4">
@@ -59,7 +79,7 @@ export default function CartPage() {
                         />
                       </div>
                       <div>
-                        <Link href={`/products/${item.id}`} className="font-medium hover:underline">
+                        <Link href={`/products/฿{item.id}`} className="font-medium hover:underline">
                           {item.name}
                         </Link>
                         <p className="text-sm text-muted-foreground">{item.brand}</p>
@@ -78,7 +98,7 @@ export default function CartPage() {
                       </div>
                     </div>
                   </div>
-                  <div className="col-span-2 text-center">${item.price.toFixed(2)}</div>
+                  <div className="col-span-2 text-center">฿{Number(item.price).toFixed(2)}</div>
                   <div className="col-span-2">
                     <div className="flex items-center justify-center">
                       <button
@@ -103,7 +123,7 @@ export default function CartPage() {
                       </button>
                     </div>
                   </div>
-                  <div className="col-span-2 text-right font-medium">${(item.price * item.quantity).toFixed(2)}</div>
+                  <div className="col-span-2 text-right font-medium">฿{(item.price * item.quantity).toFixed(2)}</div>
                 </div>
                 <Separator />
               </div>
@@ -117,7 +137,7 @@ export default function CartPage() {
             <div className="space-y-4">
               <div className="flex justify-between">
                 <span>Subtotal ({itemCount} items)</span>
-                <span>${subtotal.toFixed(2)}</span>
+                <span>฿{subtotal.toFixed(2)}</span>
               </div>
               <div className="flex justify-between">
                 <span>Shipping</span>
@@ -125,15 +145,25 @@ export default function CartPage() {
               </div>
               <div className="flex justify-between">
                 <span>Tax</span>
-                <span>${(subtotal * 0.08).toFixed(2)}</span>
+                <span>฿{(subtotal * 0.08).toFixed(2)}</span>
               </div>
               <Separator />
               <div className="flex justify-between font-medium">
                 <span>Total</span>
-                <span>${(subtotal + subtotal * 0.08).toFixed(2)}</span>
+                <span>฿{(subtotal + subtotal * 0.08).toFixed(2)}</span>
               </div>
             </div>
-            <Button className="w-full">Proceed to Checkout</Button>
+            {isLoggedIn ? (
+              <Link href="/checkout">
+                <Button className="w-full">Proceed to Checkout</Button>
+              </Link>
+            ) : (
+              <Link href="/login">
+                <Button className="w-full" variant="outline">
+                  Please login to Checkout
+                </Button>
+              </Link>
+            )}
             <div className="text-center">
               <Link href="/products" className="text-sm text-primary hover:underline">
                 Continue Shopping

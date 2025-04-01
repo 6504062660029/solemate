@@ -9,6 +9,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
 import { Eye, EyeOff } from "lucide-react"
+import { useRouter } from "next/navigation"
+
 
 export default function SignupPage() {
   const [firstName, setFirstName] = useState("")
@@ -19,6 +21,8 @@ export default function SignupPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const { toast } = useToast()
+  const router = useRouter()
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -65,8 +69,7 @@ export default function SignupPage() {
           lastName,
           email,
           password,
-          phone: null, // ยังไม่มีในฟอร์ม
-        }),
+        }), 
       })
 
       const data = await res.json()
@@ -86,6 +89,9 @@ export default function SignupPage() {
       setEmail("")
       setPassword("")
       setConfirmPassword("")
+
+      // ✅ Redirect to login page
+      router.push("/login")
     } catch (error: any) {
       toast({
         title: "Error",

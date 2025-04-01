@@ -16,9 +16,9 @@ export function DbStatus() {
         <div className="flex items-center">
           <Database className="h-5 w-5 text-yellow-500 mr-2" />
           <div>
-            <AlertTitle>Using Demo Data</AlertTitle>
+            <AlertTitle>📣 Solemate Announcement 📣 </AlertTitle>
             <AlertDescription>
-              This preview is using demo data. To use real data, configure your database connection.
+            Find the perfect pair for every style and occasion at SoleMate 100% authentic, no fakes❤️❤️❤️
             </AlertDescription>
           </div>
         </div>
