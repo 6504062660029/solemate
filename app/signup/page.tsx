@@ -65,8 +65,8 @@ export default function SignupPage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          firstName,
-          lastName,
+          first_name:firstName,
+          last_name:lastName,
           email,
           password,
         }), 
@@ -75,6 +75,7 @@ export default function SignupPage() {
       const data = await res.json()
 
       if (!res.ok) {
+        console.error("❌ Register failed:", data)
         throw new Error(data.message || "Something went wrong")
       }
 

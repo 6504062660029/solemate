@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import Image from "next/image"
 import Link from "next/link"
 import { Star, Truck, ShieldCheck, ArrowLeft, Heart } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -13,46 +12,6 @@ import { useCart } from "@/context/cart-context"
 import { useWishlist } from "@/context/wishlist-context"
 import { useToast } from "@/hooks/use-toast"
 
-// This would normally come from a database or API
-// const product = {
-//   id: 1,
-//   name: "Air Max Pulse",
-//   brand: "Nike",
-//   category: "Athletic",
-//   price: 149.99,
-//   originalPrice: 169.99,
-//   rating: 4.8,
-//   reviewCount: 124,
-//   colors: ["Black/White", "Blue/Grey", "Red/Black"],
-//   sizes: ["7", "8", "9", "10", "11", "12"],
-//   images: [
-//     "/placeholder.svg?height=600&width=600",
-//     "/placeholder.svg?height=600&width=600",
-//     "/placeholder.svg?height=600&width=600",
-//     "/placeholder.svg?height=600&width=600",
-//   ],
-//   description:
-//     "The Nike Air Max Pulse draws inspiration from the London music scene, bringing an underground touch to the iconic Air Max line. Its technical design delivers a tough, utility-focused silhouette that's built to withstand everyday wear and tear. The textile-wrapped midsole and Air Max unit in the heel provide responsive cushioning for all-day comfort.",
-//   features: [
-//     "Mesh and synthetic upper for breathability and durability",
-//     "Air Max cushioning for responsive comfort",
-//     "Rubber outsole for traction and durability",
-//     "Pull tab on heel for easy on and off",
-//     "Padded collar for comfort",
-//   ],
-//   specifications: {
-//     material: "Mesh, Synthetic",
-//     cushioning: "Air Max",
-//     closure: "Lace-up",
-//     terrain: "Road, Gym",
-//     weight: "11.5 oz / 326 g",
-//     style: "Athletic",
-//   },
-//   isNew: true,
-//   isBestSeller: true,
-// }
-
-// Update the component to fetch the product based on the ID parameter
 export default function ProductDetailPage({ params }: { params: { id: string } }) {
   const { addItem } = useCart()
   const { addItem: addToWishlist, removeItem: removeFromWishlist, isInWishlist } = useWishlist()
@@ -69,7 +28,13 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
       try {
         const response = await fetch(`/api/products/${params.id}`)
         const data = await response.json()
+        console.log("Product data:", data.product)
         setProduct(data.product)
+
+        // Set default color when product data is loaded
+        if (data.product && data.product.colors && data.product.colors.length > 0) {
+          setSelectedColor(data.product.colors[0])
+        }
       } catch (error) {
         console.error("Error fetching product:", error)
         // Set a default product if fetch fails
@@ -98,13 +63,6 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
     fetchProduct()
   }, [params.id])
 
-  // Set default color and size when product data is loaded
-  useEffect(() => {
-    if (product && product.colors && product.colors.length > 0) {
-      setSelectedColor(product.colors[0])
-    }
-  }, [product])
-
   const inWishlist = product ? isInWishlist(product.id) : false
 
   const handleAddToCart = () => {
@@ -124,7 +82,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
       name: product.name,
       brand: product.brand,
       price: product.price,
-      image: product.images?.[0] || "/placeholder.svg?height=600&width=600",
+      image: product.image_url,
       color: selectedColor,
       size: selectedSize,
       quantity: quantity,
@@ -152,7 +110,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
         brand: product.brand,
         price: product.price,
         originalPrice: product.originalPrice || product.price,
-        image: product.images?.[0] || "/placeholder.svg?height=600&width=600",
+        image: product.image_url,
         rating: product.rating,
         reviewCount: product.reviewCount,
       })
@@ -196,26 +154,14 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
         {/* Product Images */}
         <div className="space-y-4">
           <div className="overflow-hidden rounded-lg border">
-            <Image
-              src={product.images?.[0] || "/placeholder.svg?height=600&width=600"}
-              alt={product.name}
-              width={600}
-              height={600}
-              className="h-full w-full object-cover"
-            />
-          </div>
-          <div className="grid grid-cols-4 gap-4">
-            {(product.images || ["/placeholder.svg?height=600&width=600"]).map((image: string, index: number) => (
-              <div key={index} className="overflow-hidden rounded-md border">
-                <Image
-                  src={image || "/placeholder.svg?height=150&width=150"}
-                  alt={`${product.name} - Image ${index + 1}`}
-                  width={150}
-                  height={150}
-                  className="h-full w-full object-cover"
-                />
-              </div>
-            ))}
+            {/* Main product image */}
+            <div className="relative aspect-square">
+              <img
+                src={product.image_url || "/placeholder.svg"}
+                alt={product.name}
+                className="h-full w-full object-cover"
+              />
+            </div>
           </div>
         </div>
 

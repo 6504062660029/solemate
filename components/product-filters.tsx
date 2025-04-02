@@ -6,9 +6,25 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 import { Slider } from "@/components/ui/slider"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
+import { useRouter, useSearchParams } from "next/navigation"
 
 export function ProductFilters() {
-  const [priceRange, setPriceRange] = useState([0, 200])
+  const router = useRouter()
+  const searchParams = useSearchParams()
+
+  // Initialize state from URL parameters
+  const [priceRange, setPriceRange] = useState([
+    Number(searchParams.get("minPrice") || 0),
+    Number(searchParams.get("maxPrice") || 200),
+  ])
+
+  const [selectedCategories, setSelectedCategories] = useState<string[]>(
+    searchParams.get("categories")?.split(",").filter(Boolean) || [],
+  )
+
+  const [selectedBrands, setSelectedBrands] = useState<string[]>(
+    searchParams.get("brands")?.split(",").filter(Boolean) || [],
+  )
 
   const categories = [
     { id: "athletic", label: "Athletic" },
@@ -46,6 +62,32 @@ export function ProductFilters() {
     { id: "12", label: "12" },
   ]
 
+  const handleCategoryChange = (categoryId: string, checked: boolean) => {
+    setSelectedCategories((prev) => (checked ? [...prev, categoryId] : prev.filter((id) => id !== categoryId)))
+  }
+
+  const handleBrandChange = (brandId: string, checked: boolean) => {
+    setSelectedBrands((prev) => (checked ? [...prev, brandId] : prev.filter((id) => id !== brandId)))
+  }
+
+  const applyFilters = () => {
+    // Create a new URLSearchParams object
+    const params = new URLSearchParams()
+
+    // Add price range
+    if (priceRange[0] > 0) params.set("minPrice", priceRange[0].toString())
+    if (priceRange[1] < 200) params.set("maxPrice", priceRange[1].toString())
+
+    // Add categories
+    if (selectedCategories.length > 0) params.set("categories", selectedCategories.join(","))
+
+    // Add brands
+    if (selectedBrands.length > 0) params.set("brands", selectedBrands.join(","))
+
+    // Navigate to the new URL
+    router.push(`/products?${params.toString()}`)
+  }
+
   return (
     <div className="space-y-6">
       <div className="space-y-4">
@@ -59,14 +101,18 @@ export function ProductFilters() {
         </div>
       </div>
 
-      <Accordion type="multiple" defaultValue={["categories", "brands", "colors", "sizes"]}>
+      <Accordion type="multiple" defaultValue={["categories", "brands"]}>
         <AccordionItem value="categories">
           <AccordionTrigger className="text-lg font-medium">Categories</AccordionTrigger>
           <AccordionContent>
             <div className="space-y-2">
               {categories.map((category) => (
                 <div key={category.id} className="flex items-center space-x-2">
-                  <Checkbox id={`category-${category.id}`} />
+                  <Checkbox
+                    id={`category-${category.id}`}
+                    checked={selectedCategories.includes(category.id)}
+                    onCheckedChange={(checked) => handleCategoryChange(category.id, checked === true)}
+                  />
                   <Label htmlFor={`category-${category.id}`}>{category.label}</Label>
                 </div>
               ))}
@@ -80,7 +126,11 @@ export function ProductFilters() {
             <div className="space-y-2">
               {brands.map((brand) => (
                 <div key={brand.id} className="flex items-center space-x-2">
-                  <Checkbox id={`brand-${brand.id}`} />
+                  <Checkbox
+                    id={`brand-${brand.id}`}
+                    checked={selectedBrands.includes(brand.id)}
+                    onCheckedChange={(checked) => handleBrandChange(brand.id, checked === true)}
+                  />
                   <Label htmlFor={`brand-${brand.id}`}>{brand.label}</Label>
                 </div>
               ))}
@@ -117,7 +167,9 @@ export function ProductFilters() {
         </AccordionItem>
       </Accordion>
 
-      <Button className="w-full">Apply Filters</Button>
+      <Button className="w-full" onClick={applyFilters}>
+        Apply Filters
+      </Button>
     </div>
   )
 }

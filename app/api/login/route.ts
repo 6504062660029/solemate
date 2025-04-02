@@ -9,35 +9,48 @@ function hashPassword(password: string) {
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json()
-    const { email, password } = body
+    console.log("⏳ Login handler started");
 
+    const body = await req.json();
+    console.log("📥 Request Body:", body);
+
+    const { email, password } = body;
     if (!email || !password) {
-      return NextResponse.json({ message: "Missing email or password" }, { status: 400 })
+      console.log("❌ Missing fields");
+      return NextResponse.json({ message: "Missing email or password" }, { status: 400 });
     }
 
-    const users = await query("SELECT * FROM user WHERE email = ?", [email])
+    const users = await query("SELECT * FROM user WHERE email = ?", [email]);
+    console.log("📦 Users from DB:", users);
+
     if ((users as any[]).length === 0) {
-      return NextResponse.json({ message: "User not found" }, { status: 404 })
+      console.log("❌ User not found");
+      return NextResponse.json({ message: "User not found" }, { status: 404 });
     }
 
-    const user = (users as any)[0]
-    const passwordHash = hashPassword(password)
+    const user = (users as any)[0];
+    const passwordHash = hashPassword(password);
+
+    console.log("🧑 User:", user);
+    console.log("🔐 Input hash:", passwordHash);
+    console.log("🔐 Stored hash:", user.password_hash);
 
     if (passwordHash !== user.password_hash) {
-      return NextResponse.json({ message: "Incorrect password" }, { status: 401 })
+      console.log("❌ Incorrect password");
+      return NextResponse.json({ message: "Incorrect password" }, { status: 401 });
     }
 
-    // ✅ เก็บ session ลง cookie
     cookies().set("session_user_id", user.id.toString(), {
       httpOnly: true,
       path: "/",
-      maxAge: 60 * 60 * 24, // 1 วัน
-    })
+      maxAge: 60 * 60 * 24,
+    });
 
-    return NextResponse.json({ message: "Login successful", user: { id: user.id, email: user.email } })
+    console.log("✅ Login success");
+    return NextResponse.json({ message: "Login successful" });
   } catch (error: any) {
-    console.error("Login error:", error)
-    return NextResponse.json({ message: "Server error" }, { status: 500 })
+    console.error("❌ Caught Error in Login:", error);
+    return NextResponse.json({ message: "Server error" }, { status: 500 });
   }
 }
+

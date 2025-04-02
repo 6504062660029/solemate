@@ -1,6 +1,5 @@
 "use client"
 
-import Image from "next/image"
 import Link from "next/link"
 import { Heart, ShoppingBag, Star } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -79,12 +78,10 @@ export function ProductCard({ product }: ProductCardProps) {
       <div className="relative">
         <Link href={`/products/${product.id}`}>
           <div className="aspect-square overflow-hidden">
-            <Image
+            <img
               src={product.image_url || "/placeholder.svg?height=400&width=400"}
               alt={product.name}
-              width={400}
-              height={400}
-              className="object-cover transition-transform group-hover:scale-105"
+              className="h-full w-full object-cover transition-transform group-hover:scale-105"
             />
           </div>
         </Link>

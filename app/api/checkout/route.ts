@@ -1,53 +1,33 @@
 import { cookies } from "next/headers"
 import { NextRequest, NextResponse } from "next/server"
 import { query } from "@/lib/db"
-import { writeFile } from "fs/promises"
-import path from "path"
 
 export async function POST(req: NextRequest) {
   try {
-    const sessionId = cookies().get("session_user_id")?.value
+    const sessionCookie = cookies().get("session_user_id")
+    const sessionId = parseInt(sessionCookie?.value || "0")
+    console.log("[Checkout API] session_id:", sessionId)
+
     if (!sessionId) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
     }
 
-    const formData = await req.formData()
-    const fullName = formData.get("fullName") as string
-    const address = formData.get("address") as string
-    const phone = formData.get("phone") as string
-    const paymentMethod = formData.get("paymentMethod") as string
-    const slip = formData.get("slip") as File | null
+    const body = await req.json()
+    console.log("[Checkout API] body:", body)
 
-    let slipUrl: string | null = null
+    const { fullName, address, phone, paymentMethod, total } = body
 
-    if (slip) {
-      const bytes = await slip.arrayBuffer()
-      const buffer = Buffer.from(bytes)
-      const fileName = `${Date.now()}_${slip.name}`
-      const filePath = path.join(process.cwd(), "public", "slips", fileName)
-
-      await writeFile(filePath, buffer)
-      slipUrl = `/slips/${fileName}`
-    }
-
-    await query(
-      `INSERT INTO orders (user_id, full_name, address, phone, payment_method, payment_status, slip_url, total)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        sessionId,
-        fullName,
-        address,
-        phone,
-        paymentMethod,
-        paymentMethod === "card" ? "paid" : "pending",
-        slipUrl,
-        999.99, // 📝 ปรับเป็นยอดรวมจริงได้
-      ]
+    const result = await query(
+      `INSERT INTO orders (user_id, full_name, address, phone, payment_method, total, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, NOW())`,
+      [sessionId, fullName, address, phone, paymentMethod, parseFloat(total)]
     )
 
+    console.log("[Checkout API] Insert result:", result)
+
     return NextResponse.json({ message: "Order placed successfully" })
-  } catch (err: any) {
-    console.error("Checkout error:", err)
+  } catch (err) {
+    console.error("[Checkout API] error:", err)
     return NextResponse.json({ message: "Internal Server Error" }, { status: 500 })
   }
 }

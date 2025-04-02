@@ -1,6 +1,9 @@
+"use client"
+export const dynamic = "force-dynamic"
+
 import { ProductFilters } from "@/components/product-filters"
-import { ProductGrid } from "@/components/product-grid"
 import { Separator } from "@/components/ui/separator"
+import { ProductGridWrapper } from "./ProductGridWrapper"  // 👈 เปลี่ยนมาใช้ wrapper
 
 export default function ProductsPage() {
   return (
@@ -16,10 +19,9 @@ export default function ProductsPage() {
           <ProductFilters />
         </div>
         <div className="flex-1">
-          <ProductGrid />
+          <ProductGridWrapper />
         </div>
       </div>
     </div>
   )
 }
-

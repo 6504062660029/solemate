@@ -4,12 +4,14 @@ services:
   app:
     build: .
     ports:
-      - "3000:3000"
+      - "3001:3000"
+    env_file:
+      - .env
     environment:
-      - DATABASE_HOST=db
-      - DATABASE_USER=root
-      - DATABASE_PASSWORD=secret
-      - DATABASE_NAME=solemate
+      - DATABASE_HOST=${DATABASE_HOST}
+      - DATABASE_USER=${DATABASE_USER}
+      - DATABASE_PASSWORD=${DATABASE_PASSWORD}
+      - DATABASE_NAME=${DATABASE_NAME}
     depends_on:
       - db
     volumes:
@@ -20,8 +22,8 @@ services:
     image: mysql:8.0
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: secret
-      MYSQL_DATABASE: solemate
+      MYSQL_ROOT_PASSWORD: ${DATABASE_PASSWORD}
+      MYSQL_DATABASE: ${DATABASE_NAME}
     ports:
       - "3306:3306"
     volumes:
@@ -34,7 +36,7 @@ services:
       - "8080:80"
     environment:
       PMA_HOST: db
-      MYSQL_ROOT_PASSWORD: secret
+      MYSQL_ROOT_PASSWORD: ${DATABASE_PASSWORD}
 
 volumes:
   db_data:

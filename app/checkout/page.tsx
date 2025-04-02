@@ -1,130 +1,206 @@
 "use client"
 
 import { useState } from "react"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import OrderSummary from "@/context/checkout/OrderSummary"
-import { Button } from "@/components/ui/button"
-import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useCheckout, CheckoutProvider } from "@/context/checkout-context"
-import PaymentMethod from "@/components/checkout/PaymentMethod"
+import { useCart } from "@/context/cart-context"
+import { CheckoutSteps } from "@/components/checkout/checkout-steps"
+import { ShippingForm } from "@/components/checkout/shipping-form"
+import { PaymentMethodForm } from "@/components/checkout/payment-method-form"
+import { OrderSummary } from "@/components/checkout/order-summary"
+import { OrderConfirmation } from "@/components/checkout/order-confirmation"
+import { Container } from "@/components/ui/container"
+import { useToast } from "@/hooks/use-toast"
 
-function CheckoutContent() {
-  const { paymentMethod } = useCheckout()
-  const router = useRouter()
+export type ShippingDetails = {
+  firstName: string
+  lastName: string
+  email: string
+  phone: string
+  address: string
+  apartment?: string
+  city: string
+  state: string
+  postalCode: string
+  country: string
+}
 
-  const [form, setForm] = useState({
-    fullName: "",
-    address: "",
-    phone: "",
-    cardNumber: "",
-    expMonth: "",
-    expYear: "",
-    cvc: "",
-    slip: null as File | null,
-  })
+export type PaymentMethod = "credit_card" | "bank_transfer"
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target
-    setForm({ ...form, [name]: value })
-  }
-
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0] || null
-    setForm({ ...form, slip: file })
-  }
-
-  const handlePlaceOrder = async () => {
-    if (!form.fullName || !form.address || !form.phone) {
-      alert("Please complete shipping information")
-      return
-    }
-
-    const formData = new FormData()
-    formData.append("fullName", form.fullName)
-    formData.append("address", form.address)
-    formData.append("phone", form.phone)
-    formData.append("paymentMethod", paymentMethod)
-    if (form.slip) formData.append("slip", form.slip)
-
-    const res = await fetch("/api/checkout", {
-      method: "POST",
-      body: formData,
-      credentials: "include",
-    })
-
-    const data = await res.json()
-    if (res.ok) {
-      alert("Order placed successfully!")
-      router.push("/thank-you")
-    } else {
-      alert("Error: " + data.message)
-    }
-  }
-
-  return (
-    <div className="max-w-screen-md mx-auto px-4 py-12 space-y-6">
-      <h1 className="text-3xl font-bold mb-6">Checkout</h1>
-
-      <div className="space-y-4">
-        <Label>Full Name</Label>
-        <Input name="fullName" value={form.fullName} onChange={handleChange} />
-
-        <Label>Address</Label>
-        <Input name="address" value={form.address} onChange={handleChange} />
-
-        <Label>Phone</Label>
-        <Input name="phone" value={form.phone} onChange={handleChange} />
-      </div>
-
-      <PaymentMethod />
-
-      {paymentMethod === "promptpay" && (
-        <div className="border p-4 rounded">
-          <p className="mb-2">Scan this PromptPay QR Code:</p>
-          <img src="/promptpay-qr.png" alt="PromptPay QR" className="w-48 h-48" />
-        </div>
-      )}
-
-      {paymentMethod === "bank" && (
-        <div className="space-y-2">
-          <Label>Upload Slip</Label>
-          <Input type="file" accept="image/*" onChange={handleFileUpload} />
-        </div>
-      )}
-
-      {paymentMethod === "card" && (
-        <div className="space-y-2">
-          <Label>Card Number</Label>
-          <Input name="cardNumber" value={form.cardNumber} onChange={handleChange} />
-          <div className="flex gap-2">
-            <Input name="expMonth" placeholder="MM" value={form.expMonth} onChange={handleChange} />
-            <Input name="expYear" placeholder="YYYY" value={form.expYear} onChange={handleChange} />
-            <Input name="cvc" placeholder="CVV" value={form.cvc} onChange={handleChange} />
-          </div>
-        </div>
-      )}
-
-      <OrderSummary />
-
-      <Button className="w-full" onClick={handlePlaceOrder}>
-        Place Order
-      </Button>
-
-      <div className="text-center">
-        <Link href="/cart" className="text-sm text-primary hover:underline">
-          Back to Cart
-        </Link>
-      </div>
-    </div>
-  )
+export type CardDetails = {
+  cardNumber: string
+  cardholderName: string
+  expiryDate: string
+  cvv: string
 }
 
 export default function CheckoutPage() {
+  const router = useRouter()
+  const { items, subtotal, clearCart } = useCart()
+  const { toast } = useToast()
+
+  const [currentStep, setCurrentStep] = useState(1)
+  const [isProcessing, setIsProcessing] = useState(false)
+  const [orderId, setOrderId] = useState<string>("")
+
+  const [shippingDetails, setShippingDetails] = useState<ShippingDetails>({
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    address: "",
+    apartment: "",
+    city: "",
+    state: "",
+    postalCode: "",
+    country: "Thailand",
+  })
+
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod>("credit_card")
+  const [cardDetails, setCardDetails] = useState<CardDetails>({
+    cardNumber: "",
+    cardholderName: "",
+    expiryDate: "",
+    cvv: "",
+  })
+
+  const shipping = subtotal > 50 ? 0 : 5.99
+  const tax = subtotal * 0.07
+  const total = subtotal + shipping + tax
+
+  const [orderSummary, setOrderSummary] = useState({
+    subtotal: 0,
+    shipping: 0,
+    tax: 0,
+    total: 0,
+  })
+
+  const handleShippingSubmit = (data: ShippingDetails) => {
+    setShippingDetails(data)
+    setCurrentStep(2)
+    window.scrollTo(0, 0)
+  }
+
+  const generateOrderNumber = () => {
+    const prefix = "SM-"
+    const randomNum = Math.floor(100000 + Math.random() * 900000)
+    return `${prefix}${randomNum}`
+  }
+
+  const handlePaymentSubmit = async () => {
+    console.log("[Checkout] handlePaymentSubmit called")
+    setIsProcessing(true)
+
+    try {
+      setOrderSummary({ subtotal, shipping, tax, total })
+
+      const res = await fetch("/api/checkout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          fullName: `${shippingDetails.firstName} ${shippingDetails.lastName}`,
+          address: `${shippingDetails.address}, ${shippingDetails.city}, ${shippingDetails.state}, ${shippingDetails.postalCode}`,
+          phone: shippingDetails.phone,
+          paymentMethod: selectedPaymentMethod === "credit_card" ? "credit" : "bank_transfer",
+          total: total.toFixed(2),
+        }),
+      })
+
+      console.log("[Checkout] fetch /api/checkout status:", res.status)
+
+      if (!res.ok) throw new Error("Failed to place order")
+
+      const newOrderId = generateOrderNumber()
+      setOrderId(newOrderId)
+
+      toast({
+        title: "Order placed successfully!",
+        description: `Your order #${newOrderId} has been placed.`,
+      })
+
+      setCurrentStep(3)
+      clearCart()
+    } catch (error) {
+      console.error("[Checkout] Payment error:", error)
+      toast({
+        title: "Error processing payment",
+        description: "There was an error processing your payment. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsProcessing(false)
+      window.scrollTo(0, 0)
+    }
+  }
+
+  const handleBackToShopping = () => router.push("/products")
+
+  if (items.length === 0 && currentStep !== 3) {
+    return (
+      <Container className="py-12 flex flex-col items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold mb-4">Your cart is empty</h1>
+          <p className="mb-6">Add some products to your cart before proceeding to checkout.</p>
+          <button
+            onClick={() => router.push("/cart")}
+            className="bg-primary text-white px-6 py-2 rounded-md hover:bg-primary/90"
+          >
+            Return to Cart
+          </button>
+        </div>
+      </Container>
+    )
+  }
+
   return (
-    <CheckoutProvider>
-      <CheckoutContent />
-    </CheckoutProvider>
+    <Container className="py-8">
+      <h1 className="text-3xl font-bold mb-8">Checkout</h1>
+      <CheckoutSteps currentStep={currentStep} />
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-8">
+        <div className="lg:col-span-2">
+          {currentStep === 1 && (
+            <ShippingForm
+              initialValues={shippingDetails}
+              onSubmit={handleShippingSubmit}
+            />
+          )}
+
+          {currentStep === 2 && (
+            <PaymentMethodForm
+              selectedMethod={selectedPaymentMethod}
+              onMethodChange={setSelectedPaymentMethod}
+              cardDetails={cardDetails}
+              onCardDetailsChange={setCardDetails}
+              onBack={() => setCurrentStep(1)}
+              onSubmit={handlePaymentSubmit}
+              isProcessing={isProcessing}
+              total={total}
+            />
+          )}
+
+          {currentStep === 3 && (
+            <OrderConfirmation
+              orderId={orderId}
+              shippingDetails={shippingDetails}
+              paymentMethod={selectedPaymentMethod}
+              onBackToShopping={handleBackToShopping}
+              orderSummary={orderSummary}
+            />
+          )}
+        </div>
+
+        <div className="lg:col-span-1">
+          <OrderSummary
+            items={currentStep === 3 ? [] : items}
+            subtotal={currentStep === 3 ? orderSummary.subtotal : subtotal}
+            shipping={currentStep === 3 ? orderSummary.shipping : shipping}
+            tax={currentStep === 3 ? orderSummary.tax : tax}
+            total={currentStep === 3 ? orderSummary.total : total}
+          />
+        </div>
+      </div>
+    </Container>
   )
 }
